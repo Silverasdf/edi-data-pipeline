@@ -5,3 +5,8 @@ edi_warehouse:
       type: duckdb
       path: ../data/warehouse.duckdb
       threads: 1
+    security:
+      # Used by the evaluation script so it can score an isolated warehouse.
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH') }}"
+      threads: 1

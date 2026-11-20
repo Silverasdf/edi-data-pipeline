@@ -3,6 +3,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+# Mirrors dbt_project/seeds/partners.csv: senders outside this list are not trusted.
+KNOWN_PARTNERS = frozenset({
+    "NORTHWIND01", "BLUERIDGE02", "SMOKYMTN03",
+    "TENNRIVER04", "CUMBERLND05", "VOLUNTEER06",
+})
+
 
 @dataclass
 class ParsedFile:
@@ -37,6 +43,8 @@ def parse_file(path: Path) -> ParsedFile:
 
     isa = by_id["ISA"][0]
     pf.partner, pf.control_number = isa[6].strip(), isa[13]
+    if pf.partner and pf.partner not in KNOWN_PARTNERS:
+        pf.errors.append(("UNKNOWN_SENDER", f"ISA06 sender {pf.partner!r} is not a known partner"))
 
     st = by_id.get("ST", [None])[0]
     if st is None:

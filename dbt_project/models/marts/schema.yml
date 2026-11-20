@@ -72,3 +72,4 @@ models:
                   - BAD_TOTAL
                   - MISSING_TDS
                   - DUPLICATE_CONTROL
+                  - UNKNOWN_SENDER

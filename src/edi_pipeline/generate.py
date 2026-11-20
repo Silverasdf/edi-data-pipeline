@@ -19,9 +19,13 @@ PARTNERS = {
 ITEMS = [(f"SKU{n:04d}", round(random.Random(n).uniform(2.5, 90.0), 2)) for n in range(1, 21)]
 SENDER = "FAKEVENDOR"  # our fictional company
 
+SPOOFED_SENDER = "EVILVENDOR"  # not in the known-partner list
+OUTLIER_MULTIPLIER = 20  # makes an invoice total far above a partner's normal range
+
 ERROR_TYPES = {
-    "850": ["missing_segment", "duplicate_control", "bad_se_count", "bad_date"],
-    "810": ["bad_total", "missing_segment", "duplicate_control", "bad_se_count", "bad_date"],
+    "850": ["missing_segment", "duplicate_control", "bad_se_count", "bad_date", "spoofed_sender"],
+    "810": ["bad_total", "missing_segment", "duplicate_control", "bad_se_count", "bad_date",
+            "spoofed_sender", "outlier_amount"],
 }
 
 
@@ -105,27 +109,43 @@ def generate(out_dir: Path, run_date: date, n_pairs: int = 40, error_rate: float
         for tx_code, builder in (("850", build_850), ("810", build_810)):
             control += 1
             d = run_date - timedelta(days=random.randint(0, 2))
-            if tx_code == "850":
-                tx = builder(po_number, d, lines)
-            else:
-                tx = builder(f"INV{po_number[2:]}", po_number, d, lines)
             used = control
+            sender = partner
+            tx_lines = lines
             error = None
+            anomaly = None
             if random.random() < error_rate:
                 error = random.choice(ERROR_TYPES[tx_code])
                 same_partner = [c for p, c in used_controls if p == partner]
-                if error == "duplicate_control" and same_partner:
-                    used = random.choice(same_partner)
-                else:
-                    error = error if error != "duplicate_control" else None
-                    if error:
-                        tx = inject_error(tx, error, used_controls)
-            used_controls.append((partner, control))
-            segs = wrap_interchange(partner, SENDER, used, d, tx, tx_code)
+                if error == "duplicate_control":
+                    # Reuse an earlier control number only when the partner has one.
+                    if same_partner:
+                        used = random.choice(same_partner)
+                    else:
+                        error = None
+                elif error == "spoofed_sender":
+                    # The ISA sender no longer matches a known partner.
+                    sender = SPOOFED_SENDER
+                elif error == "outlier_amount":
+                    # A syntactically valid invoice with an extreme amount: only the
+                    # statistical detector in dbt can flag it.
+                    tx_lines = [(sku, qty, round(price * OUTLIER_MULTIPLIER, 2))
+                                for sku, qty, price in lines]
+                    anomaly = error
+                    error = None
+            doc_number = po_number if tx_code == "850" else f"INV{po_number[2:]}"
+            tx = (builder(doc_number, d, tx_lines) if tx_code == "850"
+                  else builder(doc_number, po_number, d, tx_lines))
+            if error:
+                tx = inject_error(tx, error, used_controls)
+            used_controls.append((sender, control))
+            segs = wrap_interchange(sender, SENDER, used, d, tx, tx_code)
             seq += 1
             name = f"{seq:04d}_{partner}_{tx_code}.edi"  # sequence prefix = arrival order
             (day_dir / name).write_text(SEGMENT_END.join(segs) + SEGMENT_END, encoding="ascii")
-            manifest.append({"file": name, "partner": partner, "type": tx_code, "injected_error": error})
+            manifest.append({"file": name, "partner": partner, "type": tx_code,
+                             "doc_number": doc_number, "injected_error": error,
+                             "injected_anomaly": anomaly})
     (day_dir / "_manifest.json").write_text(json.dumps(manifest, indent=2))
     return day_dir, manifest
 
