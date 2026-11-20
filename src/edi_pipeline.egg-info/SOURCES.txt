@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+src/edi_pipeline/__init__.py
+src/edi_pipeline.egg-info/PKG-INFO
+src/edi_pipeline.egg-info/SOURCES.txt
+src/edi_pipeline.egg-info/dependency_links.txt
+src/edi_pipeline.egg-info/top_level.txt
