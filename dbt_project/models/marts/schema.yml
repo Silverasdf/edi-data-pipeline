@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: dim_partner
+    columns:
+      - name: partner_id
+        data_tests: [unique, not_null]
+
+  - name: dim_item
+    columns:
+      - name: sku
+        data_tests: [unique, not_null]
+
+  - name: fct_order_lines
+    columns:
+      - name: po_number
+        tests: [not_null]
+      - name: partner_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_partner')
+                field: partner_id
+      - name: sku
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_item')
+                field: sku
+
+  - name: fct_invoice_lines
+    columns:
+      - name: invoice_number
+        tests: [not_null]
+      - name: po_number
+        data_tests:
+          # Warn, don't fail: an invoice can arrive for a PO we rejected.
+          - relationships:
+              arguments:
+                to: ref('fct_order_lines')
+                field: po_number
+              config:
+                severity: warn
+
+  - name: fct_invoice_reconciliation
+    columns:
+      - name: po_number
+        data_tests: [unique, not_null]
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [matched, mismatch, invoice_without_po, po_without_invoice]
+
+  - name: fct_rejects_by_partner
+    columns:
+      - name: error_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - NOT_X12
+                  - MISSING_ST
+                  - MISSING_SE
+                  - BAD_SE_COUNT
+                  - SE_CONTROL_MISMATCH
+                  - IEA_CONTROL_MISMATCH
+                  - UNSUPPORTED_TYPE
+                  - MISSING_HEADER
+                  - BAD_DATE
+                  - BAD_LINE_COUNT
+                  - BAD_TOTAL
+                  - MISSING_TDS
+                  - DUPLICATE_CONTROL

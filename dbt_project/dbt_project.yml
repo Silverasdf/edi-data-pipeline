@@ -1,0 +1,15 @@
+name: edi_warehouse
+version: "1.0.0"
+config-version: 2
+profile: edi_warehouse
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+
+models:
+  edi_warehouse:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
