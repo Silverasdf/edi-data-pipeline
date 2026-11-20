@@ -103,7 +103,7 @@ The reject rate is below the Dagster guard of 30%, so the `raw_tables` asset suc
 
 ### Security extension
 
-Descriptions of the checks are in the guide's step 13. The measurement script generates a seeded 600-file batch, loads it into an isolated warehouse, and compares dbt/validation findings with the generator manifest:
+`UNKNOWN_SENDER` rejects any ISA06 sender outside the known-partner list; `fct_unusual_invoices` flags invoice totals more than two standard deviations from the partner's mean. The measurement script generates a seeded 600-file batch, loads it into an isolated warehouse, and compares findings with the generator manifest:
 
 | Check | Injected | Caught | Clean items flagged by mistake |
 | --- | ---: | ---: | ---: |
