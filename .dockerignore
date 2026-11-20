@@ -1,0 +1,10 @@
+.git/
+.venv/
+.dagster/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.duckdb
+data/
+dbt_project/target/
+dbt_project/logs/
